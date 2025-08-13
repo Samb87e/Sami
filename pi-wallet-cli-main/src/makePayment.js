@@ -11,22 +11,28 @@ function makePayment() {
 
     piLib.createBanner('Make Payment');
 
-    //get source account information
-    const accountAddress = "GB5MMCQZBMY3R75FKK5ZRGJVVHQNAPPM2ECPIWBKNX34BR6PCM5UINHN"; 
-const accountPassphrase = "million milk tortoise run salute humble task mix iron joy course rebuild warrior sample okay clip river local marine fame tag foot inherit fan"; 
-const destAccountAddress = "GD5HFY6T3RXWVICEFYEXIF7DVQOPAQPBPCNAZHZYWVT4JQGPVR5YWE6R";
-const assetName = ""; // Set to a string like "USD" for a custom asset
-const issuerAddress = ""; // Set to the issuer's public key for a custom asset
-const transferAmt = "589";
-const transferMemo = "";
+    // --- START OF HARDCODED TRANSACTION DETAILS ---
+    // You must replace these placeholder values with your actual information.
+    // WARNING: Storing your private key here is a security risk.
 
-// The confirmation prompt is removed to make the transaction immediate
-// prompt(chalk.yellowBright('Press Enter to Finalize and Submit...'));
-    //validate
+    const accountAddress = "GB5MMCQZBMY3R75FKK5ZRGJVVHQNAPPM2ECPIWBKNX34BR6PCM5UINHN"; 
+    const accountPassphrase = "million milk tortoise run salute humble task mix iron joy course rebuild warrior sample okay clip river local marine fame tag foot inherit fan"; 
+    const destAccountAddress = "GD5HFY6T3RXWVICEFYEXIF7DVQOPAQPBPCNAZHZYWVT4JQGPVR5YWE6R";
+    const assetName = ""; // Leave as "" for the native Pi currency
+    const issuerAddress = ""; // Leave as "" for the native Pi currency
+    const transferAmt = "10";
+    const transferMemo = "";
+
+    // --- END OF HARDCODED TRANSACTION DETAILS ---
+
+    // The rest of the script remains the same
+    
+    // Validate the destination address
     if (!StellarBase.StrKey.isValidEd25519PublicKey(destAccountAddress)) {
         console.log(chalk.red('Not a valid destination address'))
         process.exit(1);
     }
+    
     var transferAsset;
     if(assetName && issuerAddress) {
         transferAsset = new Stellar.Asset(assetName, issuerAddress);
@@ -39,7 +45,6 @@ const transferMemo = "";
     const status = new Spinner('Making transaction, please wait...');
     status.start();
 
-    //create server object
     const server = new Stellar.Server(config.server)
 
     const getKeyPair = (StellarBase.StrKey.isValidEd25519SecretSeed(accountPassphrase)) ? piLib.getKeyPairFromSecret : piLib.getKeyPairFromPassphrase;
@@ -63,43 +68,32 @@ const transferMemo = "";
     const success = (tn) => {
         status.stop();
         if (tn.successful){
-            console.log(chalk.magentaBright(`\nTransaction succeeded! 80 payments were sent in a single transaction.`))
-            console.log(chalk.magentaBright(`Destination: ${destAccountAddress}`))
-            console.log(chalk.magentaBright(`Amt: ${transferAmt}`))
-            console.log(chalk.magentaBright(`Memo: ${transferMemo}`))
-            console.log(chalk.magentaBright(`Link: ${tn._links.transaction.href}`))
+            console.log(chalk.magentaBright(`\nTransaction succeeded! \nDestination: ${destAccountAddress}\nAmt: ${transferAmt}\nMemo: ${transferMemo}\nLink: ${tn._links.transaction.href}`))
         }else{
             console.log(chalk.red('\nTransaction Failed'))
         }
     }
 
-    //building transaction function
     const transaction = async () => {
 
         const keypair = await getKeyPair(accountPassphrase)
 
+        const paymentToDest = {
+            destination: destAccountAddress,
+            asset: transferAsset,
+            amount: transferAmt,
+        }
         const txOptions = {
             fee: await server.fetchBaseFee(),
             networkPassphrase: config.networkPassphrase,
         }
         const accountA = await server.loadAccount(accountAddress)
-        let transactionBuilder = new Stellar.TransactionBuilder(accountA, txOptions)
-
-        // Loop to add 80 payment operations
-        for (let i = 0; i < 80; i++) {
-            const paymentToDest = {
-                destination: destAccountAddress,
-                asset: transferAsset,
-                amount: transferAmt,
-            }
-            transactionBuilder.addOperation(Stellar.Operation.payment(paymentToDest));
-        }
-
-        // Add a single memo for the entire transaction
-        transactionBuilder.addMemo(Stellar.Memo.text(transferMemo))
+        const transaction = new Stellar.TransactionBuilder(accountA, txOptions)
+            .addOperation(Stellar.Operation.payment(paymentToDest))
+            .addMemo(Stellar.Memo.text(transferMemo))
             .setTimeout(StellarBase.TimeoutInfinite)
-        
-        const transaction = transactionBuilder.build();
+            .build()
+
         transaction.sign(keypair)
 
         const response = await server.submitTransaction(transaction)
