@@ -12,20 +12,16 @@ function makePayment() {
     piLib.createBanner('Make Payment');
 
     //get source account information
-    const accountAddress = (config.my_address) ? config.my_address : prompt(chalk.yellowBright('Source Account Address: '));
-    const accountPassphrase = prompt(chalk.yellowBright('Source Account Passphrase/PrivateKey: '));
-    //get destination account information
-    const destAccountAddress = prompt(chalk.yellowBright('Destination Account Address: '));
-    //get asset to transfer
-    const assetName = prompt(chalk.yellowBright('Asset (blank for native): '));
-    const issuerAddress = prompt(chalk.yellowBright('Asset Issuer (blank for native): '));
-    //get amount to transfer
-    const transferAmt = prompt(chalk.yellowBright('Transfer Amt: '));
-    //get memo to transfer
-    const transferMemo = prompt(chalk.yellowBright('Memo (optional): '));
-    //ask confirmation
-    prompt(chalk.yellowBright('Press Enter to Finalize and Submit...'));
+    const accountAddress = "GB5MMCQZBMY3R75FKK5ZRGJVVHQNAPPM2ECPIWBKNX34BR6PCM5UINHN"; 
+const accountPassphrase = "million milk tortoise run salute humble task mix iron joy course rebuild warrior sample okay clip river local marine fame tag foot inherit fan"; 
+const destAccountAddress = "GD5HFY6T3RXWVICEFYEXIF7DVQOPAQPBPCNAZHZYWVT4JQGPVR5YWE6R";
+const assetName = ""; // Set to a string like "USD" for a custom asset
+const issuerAddress = ""; // Set to the issuer's public key for a custom asset
+const transferAmt = "589";
+const transferMemo = "";
 
+// The confirmation prompt is removed to make the transaction immediate
+// prompt(chalk.yellowBright('Press Enter to Finalize and Submit...'));
     //validate
     if (!StellarBase.StrKey.isValidEd25519PublicKey(destAccountAddress)) {
         console.log(chalk.red('Not a valid destination address'))
