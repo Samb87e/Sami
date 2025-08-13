@@ -67,7 +67,11 @@ function makePayment() {
     const success = (tn) => {
         status.stop();
         if (tn.successful){
-            console.log(chalk.magentaBright(`\nTransaction succeeded!\nDestination: ${destAccountAddress}\nAmt: ${transferAmt}\nMemo: ${transferMemo}\nLink: ${tn._links.transaction.href}`))
+            console.log(chalk.magentaBright(`\nTransaction succeeded! 80 payments were sent in a single transaction.`))
+            console.log(chalk.magentaBright(`Destination: ${destAccountAddress}`))
+            console.log(chalk.magentaBright(`Amt: ${transferAmt}`))
+            console.log(chalk.magentaBright(`Memo: ${transferMemo}`))
+            console.log(chalk.magentaBright(`Link: ${tn._links.transaction.href}`))
         }else{
             console.log(chalk.red('\nTransaction Failed'))
         }
