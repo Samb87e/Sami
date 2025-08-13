@@ -1,1 +1,7 @@
-{"server":"https://api.testnet.minepi.com","networkPassphrase":"Pi Testnet","my_address":"","currency":"Pi","baseReserve":"20"}
+{
+  "server": "https://api.mainnet.minepi.com",
+  "networkPassphrase": "Pi Mainnet",
+  "my_address": "",
+  "currency": "Pi",
+  "baseReserve": "20"
+}
