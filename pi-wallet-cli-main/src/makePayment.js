@@ -14,10 +14,32 @@ function makePayment() {
     //get source account information
     const accountAddress = (config.my_address) ? config.my_address : prompt(chalk.yellowBright('Source Account Address: '));
     const accountPassphrase = prompt(chalk.yellowBright('Source Account Passphrase/PrivateKey: '));
-    
+    //get destination account information
+    const destAccountAddress = prompt(chalk.yellowBright('Destination Account Address: '));
+    //get asset to transfer
+    const assetName = prompt(chalk.yellowBright('Asset (blank for native): '));
+    const issuerAddress = prompt(chalk.yellowBright('Asset Issuer (blank for native): '));
+    //get amount to transfer
+    const transferAmt = prompt(chalk.yellowBright('Transfer Amt: '));
+    //get memo to transfer
+    const transferMemo = prompt(chalk.yellowBright('Memo (optional): '));
     //ask confirmation
     prompt(chalk.yellowBright('Press Enter to Finalize and Submit...'));
 
+    //validate
+    if (!StellarBase.StrKey.isValidEd25519PublicKey(destAccountAddress)) {
+        console.log(chalk.red('Not a valid destination address'))
+        process.exit(1);
+    }
+    var transferAsset;
+    if(assetName && issuerAddress) {
+        transferAsset = new Stellar.Asset(assetName, issuerAddress);
+    }else if ((assetName && !issuerAddress) || (!assetName && issuerAddress)) {
+        throw "For sending assets, both asset name and issuer address must be set!"
+    }else{
+        transferAsset = Stellar.Asset.native();
+    }
+    
     const status = new Spinner('Making transaction, please wait...');
     status.start();
 
@@ -45,77 +67,48 @@ function makePayment() {
     const success = (tn) => {
         status.stop();
         if (tn.successful){
-            console.log(chalk.magentaBright(`\nTransaction succeeded!\nLink: ${tn._links.transaction.href}`))
+            console.log(chalk.magentaBright(`\nTransaction succeeded!\nDestination: ${destAccountAddress}\nAmt: ${transferAmt}\nMemo: ${transferMemo}\nLink: ${tn._links.transaction.href}`))
         }else{
             console.log(chalk.red('\nTransaction Failed'))
         }
     }
 
-    // New loop to handle multiple payments
-    const makeMultiplePayments = async () => {
-        let continueSending = true;
-        const keypair = await getKeyPair(accountPassphrase);
+    //building transaction function
+    const transaction = async () => {
 
-        while (continueSending) {
-            //get destination account information
-            const destAccountAddress = prompt(chalk.yellowBright('Destination Account Address: '));
-            //get asset to transfer
-            const assetName = prompt(chalk.yellowBright('Asset (blank for native): '));
-            const issuerAddress = prompt(chalk.yellowBright('Asset Issuer (blank for native): '));
-            //get amount to transfer
-            const transferAmt = prompt(chalk.yellowBright('Transfer Amt: '));
-            //get memo to transfer
-            const transferMemo = prompt(chalk.yellowBright('Memo (optional): '));
+        const keypair = await getKeyPair(accountPassphrase)
 
-            //validate
-            if (!StellarBase.StrKey.isValidEd22519PublicKey(destAccountAddress)) {
-                console.log(chalk.red('Not a valid destination address'))
-                continue;
-            }
-            var transferAsset;
-            if(assetName && issuerAddress) {
-                transferAsset = new Stellar.Asset(assetName, issuerAddress);
-            }else if ((assetName && !issuerAddress) || (!assetName && issuerAddress)) {
-                throw "For sending assets, both asset name and issuer address must be set!"
-            }else{
-                transferAsset = Stellar.Asset.native();
-            }
+        const txOptions = {
+            fee: await server.fetchBaseFee(),
+            networkPassphrase: config.networkPassphrase,
+        }
+        const accountA = await server.loadAccount(accountAddress)
+        let transactionBuilder = new Stellar.TransactionBuilder(accountA, txOptions)
 
+        // Loop to add 80 payment operations
+        for (let i = 0; i < 80; i++) {
             const paymentToDest = {
                 destination: destAccountAddress,
                 asset: transferAsset,
                 amount: transferAmt,
             }
-            const txOptions = {
-                fee: await server.fetchBaseFee(),
-                networkPassphrase: config.networkPassphrase,
-            }
-
-            try {
-                const accountA = await server.loadAccount(accountAddress);
-                const transaction = new Stellar.TransactionBuilder(accountA, txOptions)
-                    .addOperation(Stellar.Operation.payment(paymentToDest))
-                    .addMemo(Stellar.Memo.text(transferMemo))
-                    .setTimeout(StellarBase.TimeoutInfinite)
-                    .build();
-
-                transaction.sign(keypair);
-                const response = await server.submitTransaction(transaction);
-                success(response);
-
-                const again = prompt(chalk.yellowBright('Send another payment? (y/n): '));
-                if (again.toLowerCase() !== 'y') {
-                    continueSending = false;
-                }
-
-            } catch (error) {
-                fail(error);
-                continueSending = false; // Exit on a failure
-            }
+            transactionBuilder = transactionBuilder.addOperation(Stellar.Operation.payment(paymentToDest))
         }
+
+        // Add a single memo for the entire transaction
+        transactionBuilder = transactionBuilder.addMemo(Stellar.Memo.text(transferMemo))
+            .setTimeout(StellarBase.TimeoutInfinite)
+        
+        const transaction = transactionBuilder.build();
+        transaction.sign(keypair)
+
+        const response = await server.submitTransaction(transaction)
+        return response
+
     }
     
-    makeMultiplePayments().catch(fail);
+    transaction().then(success).catch(fail)
+
 }
 
 module.exports = makePayment;
