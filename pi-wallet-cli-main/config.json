@@ -1,7 +1,0 @@
-{
-  "server": "https://api.mainnet.minepi.com",
-  "networkPassphrase": "Pi Mainnet",
-  "my_address": "",
-  "currency": "Pi",
-  "baseReserve": "20"
-}
